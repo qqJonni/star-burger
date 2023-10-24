@@ -3,6 +3,8 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 from .models import Product, Order, OrderItem
 
@@ -82,13 +84,13 @@ def product_list_api(request):
     })
 
 
+@api_view(['POST'])
 def register_order(request):
     try:
-        order_details = json.loads(request.body.decode())
-        print(order_details)
+        order_details = json.loads(request.body)
         create_order(order_details)
     except ValueError:
-        return JsonResponse({
+        return Response({
             'error': 'Случилась какая-то ошибка, Ваш компьютер самоуничтожется через 3...2...1...',
         })
-    return JsonResponse({})
+    return Response(order_details)
