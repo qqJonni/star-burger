@@ -1,8 +1,33 @@
-from django.http import JsonResponse
-from django.templatetags.static import static
 import json
 
-from .models import Product
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.templatetags.static import static
+
+from .models import Product, Order, OrderItem
+
+
+def create_order(order_details):
+    order = Order.objects.create(
+        phone_number=order_details['phonenumber'],
+        first_name=order_details['firstname'],
+        last_name=order_details['lastname'],
+        address=order_details['address'],
+        total_price=0,
+    )
+
+    for product_item in order_details['products']:
+        product = get_object_or_404(Product, pk=int(product_item['product']))
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=product_item['quantity'],
+        )
+
+    price = order.get_total_coast()
+    order.total_price = price
+    order.save()
+    return order
 
 
 def banners_list_api(request):
@@ -58,7 +83,12 @@ def product_list_api(request):
 
 
 def register_order(request):
-
-    data = json.loads(request.body.decode())
-    print(data)
+    try:
+        order_details = json.loads(request.body.decode())
+        print(order_details)
+        create_order(order_details)
+    except ValueError:
+        return JsonResponse({
+            'error': 'Случилась какая-то ошибка, Ваш компьютер самоуничтожется через 3...2...1...',
+        })
     return JsonResponse({})
