@@ -1,14 +1,17 @@
 import json
+from json import JSONDecodeError
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework import status
 
 from .models import Product, Order, OrderItem
 
 
+# Создаём заказ
 def create_order(order_details):
     order = Order.objects.create(
         phone_number=order_details['phonenumber'],
@@ -84,13 +87,37 @@ def product_list_api(request):
     })
 
 
+# Забираем данные заказа/проверяем валидность
 @api_view(['POST'])
 def register_order(request):
     try:
         order_details = json.loads(request.body)
+
+        if not isinstance(order_details.get('firstname'), str):
+            return Response({'error': 'Ошибка в поле "firstname"'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(order_details.get('lastname'), str):
+            return Response({'error': 'Ошибка в поле "lastname"'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(order_details.get('phonenumber'), str):
+            return Response({'error': 'Ошибка в поле "phonenumber"'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(order_details.get('address'), str):
+            return Response({'error': 'Ошибка в поле "address"'}, status=status.HTTP_400_BAD_REQUEST)
+
+        products = order_details.get('products')
+        if products is None:
+            return Response({'error': 'Поле "products" не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
+        elif not isinstance(products, list):
+            return Response({'products: Ожидался list со значениями, но был получен "str".'}, status=status.HTTP_400_BAD_REQUEST)
+        elif len(products) == 0:
+            return Response({'error': 'Список продуктов не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            for product in products:
+                if not (product, dict):
+                    return Response({'error': 'Ошибка в списке продуктов'}, status=status.HTTP_400_BAD_REQUEST)
+
         create_order(order_details)
-    except ValueError:
-        return Response({
-            'error': 'Случилась какая-то ошибка, Ваш компьютер самоуничтожется через 3...2...1...',
-        })
-    return Response(order_details)
+        return Response(order_details)
+    except JSONDecodeError:
+        return Response({'error': 'Ошибка при декодировании JSON'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
