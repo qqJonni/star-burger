@@ -125,18 +125,18 @@ class RestaurantMenuItem(models.Model):
 
 
 class Order(models.Model):
-    first_name = models.CharField('Имя', max_length=50)
-    last_name = models.CharField('Фамилия', max_length=50, db_index=True)
-    phone_number = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
+    firstname = models.CharField('Имя', max_length=50)
+    lastname = models.CharField('Фамилия', max_length=50, db_index=True)
+    phonenumber = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
     address = models.CharField('Адрес доставки', max_length=120)
-    total_price = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2)
+    totalprice = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2)
 
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
 
     def __str__(self):
-        return f'{self.first_name} {self.last_name} {self.phone_number}'
+        return f'{self.firstname} {self.lastname} {self.phonenumber}'
 
     def get_total_coast(self):
         return sum(item.get_coast() for item in self.order_items.all())
@@ -153,7 +153,7 @@ class OrderItem(models.Model):
         unique_together = ('order', 'product')
 
     def __str__(self):
-        return f'{self.order.phone_number} - {self.product.name}'
+        return f'{self.order.phonenumber} - {self.product.name}'
 
     def get_coast(self):
         return self.quantity * self.product.price
