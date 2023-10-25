@@ -12,6 +12,7 @@ from .models import RestaurantMenuItem
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
+    readonly_fields = ['price']
 
 
 @admin.register(Order)
@@ -19,6 +20,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ['firstname', 'lastname', 'phonenumber']
     search_fields = ['firstname', 'lastname', 'phonenumber']
     inlines = [OrderItemInline]
+    readonly_fields = ['totalprice']
 
 
 class RestaurantMenuItemInline(admin.TabularInline):

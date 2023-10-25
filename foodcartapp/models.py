@@ -129,7 +129,8 @@ class Order(models.Model):
     lastname = models.CharField('Фамилия', max_length=50, db_index=True)
     phonenumber = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
     address = models.CharField('Адрес доставки', max_length=120)
-    totalprice = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2)
+    totalprice = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2,
+                                     validators=[MinValueValidator(limit_value=0)])
 
     class Meta:
         verbose_name = 'Заказ'
@@ -139,13 +140,18 @@ class Order(models.Model):
         return f'{self.firstname} {self.lastname} {self.phonenumber}'
 
     def get_total_coast(self):
-        return sum(item.get_coast() for item in self.order_items.all())
+        if not self.totalprice:
+            return sum(item.get_cost() for item in self.items.all())
+        else:
+            return self.totalprice
 
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', verbose_name='Заказы', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, related_name='order_products', verbose_name='Продукты', on_delete=models.CASCADE)
     quantity = models.IntegerField('Количество')
+    price = models.DecimalField('Сумма', max_digits=10, decimal_places=2,
+                                validators=[MinValueValidator(limit_value=0)], null=True)
 
     class Meta:
         verbose_name = 'Заказ'
@@ -156,4 +162,7 @@ class OrderItem(models.Model):
         return f'{self.order.phonenumber} - {self.product.name}'
 
     def get_coast(self):
-        return self.quantity * self.product.price
+        if not self.price:
+            return self.product.price * self.quantity
+        else:
+            return self.price

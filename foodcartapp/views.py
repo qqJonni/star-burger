@@ -66,19 +66,7 @@ def product_list_api(request):
 def register_order(request):
     serializer = OrderSerializer(data=request.data)
     if serializer.is_valid(raise_exception=True):
-        order = Order.objects.create(
-            firstname=serializer.validated_data['firstname'],
-            lastname=serializer.validated_data['lastname'],
-            phonenumber=serializer.validated_data['phonenumber'],
-            address=serializer.validated_data['address'],
-            totalprice=0
-        )
-        product_fields = serializer.validated_data['products']
-        products = [OrderItem(order=order, **fields) for fields in product_fields]
-        OrderItem.objects.bulk_create(products)
-
-        order.totalprice = order.get_total_coast()
-        order.save()
+        order = serializer.create(serializer.validated_data)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
