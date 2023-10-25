@@ -71,13 +71,13 @@ def register_order(request):
             lastname=serializer.validated_data['lastname'],
             phonenumber=serializer.validated_data['phonenumber'],
             address=serializer.validated_data['address'],
-            total_price=0
+            totalprice=0
         )
         product_fields = serializer.validated_data['products']
         products = [OrderItem(order=order, **fields) for fields in product_fields]
         OrderItem.objects.bulk_create(products)
 
-        order.total_price = order.get_total_coast()
+        order.totalprice = order.get_total_coast()
         order.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     else:
