@@ -1,6 +1,8 @@
 import json
 from json import JSONDecodeError
 
+import phonenumbers
+
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
@@ -87,37 +89,52 @@ def product_list_api(request):
     })
 
 
+def check_phonenumber(phone_number):
+    try:
+        parsed_number = phonenumbers.parse(phone_number, "RU")
+        return phonenumbers.is_valid_number(parsed_number)
+    except phonenumbers.NumberParseException:
+        return False
+
+
+def validate_fields(order_details):
+    required_fields = ['firstname', 'lastname', 'phonenumber', 'address']
+    for field in required_fields:
+        if not order_details.get(field):
+            return Response({'error': f'Отсутствует обязательное поле "{field}".'}, status=status.HTTP_400_BAD_REQUEST)
+        elif not isinstance(order_details[field], str):
+            return Response({'error': f'"{field}": Это поле не может быть пустым.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    products = order_details.get('products')
+    if not products:
+        return Response({'error': 'Поле "products" не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
+    elif not isinstance(products, list):
+        return Response({'error': 'products: Ожидался list со значениями, но был получен "str".'}, status=status.HTTP_400_BAD_REQUEST)
+    elif len(products) == 0:
+        return Response({'error': 'Список продуктов не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        for product in products:
+            if not isinstance(product, dict):
+                return Response({'error': 'Ошибка в списке продуктов'}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'product' not in product or 'quantity' not in product:
+                return Response({'error': 'Недостаточно данных в списке продуктов.'}, status=status.HTTP_400_BAD_REQUEST)
+            elif not Product.objects.filter(id=product['product']).exists():
+                return Response({'error': f'products: Недопустимый первичный ключ "{product["product"]}"'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not check_phonenumber(order_details.get('phonenumber')):
+        return Response({'error': 'Введен некорректный номер телефона.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return None
+
+
 # Забираем данные заказа/проверяем валидность
 @api_view(['POST'])
 def register_order(request):
-    try:
-        order_details = json.loads(request.body)
+    validation_result = validate_fields(request.data)
+    if validation_result:
+        return validation_result
 
-        if not isinstance(order_details.get('firstname'), str):
-            return Response({'error': 'Ошибка в поле "firstname"'}, status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(order_details.get('lastname'), str):
-            return Response({'error': 'Ошибка в поле "lastname"'}, status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(order_details.get('phonenumber'), str):
-            return Response({'error': 'Ошибка в поле "phonenumber"'}, status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(order_details.get('address'), str):
-            return Response({'error': 'Ошибка в поле "address"'}, status=status.HTTP_400_BAD_REQUEST)
+    create_order(request.data)
+    return Response(request.data)
 
-        products = order_details.get('products')
-        if products is None:
-            return Response({'error': 'Поле "products" не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
-        elif not isinstance(products, list):
-            return Response({'products: Ожидался list со значениями, но был получен "str".'}, status=status.HTTP_400_BAD_REQUEST)
-        elif len(products) == 0:
-            return Response({'error': 'Список продуктов не может быть пустым'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            for product in products:
-                if not (product, dict):
-                    return Response({'error': 'Ошибка в списке продуктов'}, status=status.HTTP_400_BAD_REQUEST)
-
-        create_order(order_details)
-        return Response(order_details)
-    except JSONDecodeError:
-        return Response({'error': 'Ошибка при декодировании JSON'}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
