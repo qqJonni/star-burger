@@ -140,6 +140,7 @@ class Order(models.Model):
     lastname = models.CharField('Фамилия', max_length=50, db_index=True)
     phonenumber = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
     address = models.CharField('Адрес доставки', max_length=120)
+    comment = models.TextField('Комментарии', max_length=128, blank=True)
     totalprice = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2,
                                      validators=[MinValueValidator(limit_value=0)])
 
