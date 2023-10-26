@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Prefetch, Count
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -124,6 +125,33 @@ class RestaurantMenuItem(models.Model):
         return f"{self.restaurant.name} - {self.product.name}"
 
 
+class OrderQuerySet(models.QuerySet):
+    def prefetch_items(self):
+        orders = Order.objects.exclude(status=Order.READY).order_by('-status').select_related(
+            'restaurant').prefetch_related('items', 'items__product').annotate(product_count=Count('items__product'))
+
+        menu_items = RestaurantMenuItem.objects.filter(availability=True).values('restaurant', 'product')
+        restaurants = Restaurant.objects.in_bulk([item['restaurant'] for item in menu_items])
+
+        for order in orders:
+            if order.restaurant is None:
+                order_restaurants = []
+                order_products = order.items.all()
+                for restaurant in restaurants:
+                    restaurants_possible = True
+                    for order_product in order_products:
+                        restaurants_for_product = menu_items.filter(product=order_product.product,
+                                                                    restaurant=restaurants[restaurant])
+                        if not restaurants_for_product:
+                            restaurants_possible = False
+                    if restaurants_possible:
+                        order_restaurants.append(restaurants[restaurant])
+
+                if order_restaurants:
+                    order.restaurant_possible = order_restaurants
+        return orders
+
+
 class Order(models.Model):
     CASH = 'Наличный'
     CASHLESS = 'Безналичный'
@@ -154,6 +182,7 @@ class Order(models.Model):
     call_date = models.DateTimeField('Дата звонка', blank=True, db_index=True, null=True)
     delivery_date = models.DateTimeField('Дата доставки', blank=True, null=True, db_index=True)
     restaurant = models.ForeignKey(Restaurant, verbose_name='Ресторан', blank=True, null=True, on_delete=models.CASCADE)
+    objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Заказ'
@@ -167,6 +196,10 @@ class Order(models.Model):
             return sum(item.get_cost() for item in self.items.all())
         else:
             return self.totalprice
+
+    @staticmethod
+    def prefetch_products():
+        menu_items = RestaurantMenuItem.objects.filter(availability=True)
 
 
 class OrderItem(models.Model):
