@@ -1,9 +1,10 @@
 import re
-from operator import attrgetter, itemgetter
 
 from django.db import models
-from django.db.models import Prefetch, Count
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models import Count
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from phonenumber_field.modelfields import PhoneNumberField
 from geopy import distance
 from requests import HTTPError
@@ -133,6 +134,16 @@ class RestaurantMenuItem(models.Model):
         return f"{self.restaurant.name} - {self.product.name}"
 
 
+class Place(models.Model):
+    name = models.CharField('Hазвание', max_length=350, db_index=True, unique=True)
+    lon = models.FloatField('Широта')
+    lat = models.FloatField('Долгота')
+
+    class Meta:
+        verbose_name = 'Место'
+        verbose_name_plural = 'Места'
+
+
 def get_distance(apikey, place_from, place_to):
     """
     Возвращает расстояние между двумя точками в км
@@ -147,7 +158,7 @@ def get_distance(apikey, place_from, place_to):
         dist = distance.distance(coords_from, coords_to).km
         return dist
     except HTTPError as e:
-        return None
+        return 0
 
 
 def atoi(text):
@@ -160,7 +171,18 @@ def natural_keys(text):
     http://nedbatchelder.com/blog/200712/human_sorting.html
     (See Toothy's implementation in the comments)
     """
-    return [atoi(c) for c in re.split(r'(\d+)', text)]
+    return [atoi(c) for c in re.split(r'[+-]?([0-9]+(?:[.][0-9]*)?|[.][0-9]+)', text)]
+
+
+def get_place_coordinates(api_key, place):
+    try:
+        place = get_object_or_404(Place, name=place)
+        lon, lat = place.lon, place.lat
+        return lon, lat
+    except Http404:
+        lon, lat = fetch_coordinates(api_key, place)
+        Place.objects.create(name=place, lon=lon, lat=lat)
+        return lon, lat
 
 
 class OrderQuerySet(models.QuerySet):
@@ -178,20 +200,26 @@ class OrderQuerySet(models.QuerySet):
                 order_products = order.items.all()
                 for restaurant in restaurants:
                     restaurants_possible = True
-                    div_distance = get_distance(apikey, order.address, restaurants[restaurant].address)
-                    order_restaurants.append({
-                        'restaurant': restaurants[restaurant],
-                        'distance': div_distance
-                    })
+                    for order_product in order_products:
+                        restaurants_for_product = menu_items.filter(product=order_product.product,
+                                                                    restaurant=restaurants[restaurant])
+                        if not restaurants_for_product:
+                            restaurants_possible = False
+                    if restaurants_possible:
+                        div_distance = get_distance(apikey, order.address, restaurants[restaurant].address)
+                        order_restaurants.append({
+                            'restaurant': restaurants[restaurant],
+                            'distance': div_distance
+                        })
                 delivery_restaurants = []
                 if order_restaurants:
                     for restaurant in order_restaurants:
                         div_distance = restaurant['distance']
                         restaurant["restaurant"].distance = div_distance
-                        delivery_restaurants.append(f'{restaurant["restaurant"].name}, {round(div_distance, 0)} км.')
+                        delivery_restaurants.append(f'{restaurant["restaurant"].name} - {round(div_distance, 0)}')
                 delivery_restaurants.sort(key=natural_keys)
                 order.restaurant_possible = delivery_restaurants
-            return orders
+        return orders
 
 
 class Order(models.Model):
@@ -236,8 +264,6 @@ class Order(models.Model):
     def get_total_coast(self):
         if not self.totalprice:
             return sum(item.get_cost() for item in self.items.all())
-        else:
-            return self.totalprice
 
     @staticmethod
     def prefetch_products():
@@ -247,9 +273,9 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', verbose_name='Заказы', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, related_name='order_products', verbose_name='Продукты', on_delete=models.CASCADE)
-    quantity = models.IntegerField('Количество')
+    quantity = models.IntegerField('Количество', validators=[MaxValueValidator(100), MinValueValidator(1)])
     price = models.DecimalField('Сумма', max_digits=10, decimal_places=2,
-                                validators=[MinValueValidator(limit_value=0)], null=True)
+                                validators=[MinValueValidator(limit_value=0)])
 
     class Meta:
         verbose_name = 'Заказ'
@@ -262,5 +288,3 @@ class OrderItem(models.Model):
     def get_coast(self):
         if not self.price:
             return self.product.price * self.quantity
-        else:
-            return self.price

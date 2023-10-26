@@ -1,18 +1,21 @@
 from django.contrib import admin
+from django.http import HttpResponseRedirect
 from django.shortcuts import reverse
 from django.templatetags.static import static
 from django.utils.html import format_html
-from django.http import HttpResponseRedirect
-from .models import Product, Order, OrderItem
+
+from .models import Product
 from .models import ProductCategory
 from .models import Restaurant
 from .models import RestaurantMenuItem
+
+from .models import Order
+from .models import OrderItem
 
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    readonly_fields = ['price']
 
 
 @admin.register(Order)
