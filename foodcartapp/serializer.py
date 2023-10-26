@@ -38,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
             lastname=validated_data['lastname'],
             address=validated_data['address'],
             comment=validated_data['comment'],
+            restaurant=validated_data['restaurant'],
             total_price=0
         )
         products = validated_data['products']

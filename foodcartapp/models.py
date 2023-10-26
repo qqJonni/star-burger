@@ -153,6 +153,7 @@ class Order(models.Model):
     registration_date = models.DateTimeField('Дата регистрации', blank=True, db_index=True, auto_now=True)
     call_date = models.DateTimeField('Дата звонка', blank=True, db_index=True, null=True)
     delivery_date = models.DateTimeField('Дата доставки', blank=True, null=True, db_index=True)
+    restaurant = models.ForeignKey(Restaurant, verbose_name='Ресторан', blank=True, null=True, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Заказ'
