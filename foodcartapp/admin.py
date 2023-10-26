@@ -20,7 +20,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ['firstname', 'lastname', 'phonenumber']
     search_fields = ['firstname', 'lastname', 'phonenumber']
     inlines = [OrderItemInline]
-    readonly_fields = ['totalprice']
+    readonly_fields = ['registration_date']
 
     def response_change(self, request, obj):
         if "_continue" not in request.POST and "_addanother" not in request.POST:

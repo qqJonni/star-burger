@@ -140,9 +140,12 @@ class Order(models.Model):
     lastname = models.CharField('Фамилия', max_length=50, db_index=True)
     phonenumber = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
     address = models.CharField('Адрес доставки', max_length=120)
-    comment = models.TextField('Комментарии', max_length=128, blank=True)
     totalprice = models.DecimalField('Сумма заказа', max_digits=10, decimal_places=2,
                                      validators=[MinValueValidator(limit_value=0)])
+    comment = models.TextField('Комментарии', max_length=128, blank=True)
+    registration_date = models.DateTimeField('Дата регистрации', blank=True, db_index=True, auto_now=True)
+    call_date = models.DateTimeField('Дата звонка', blank=True, db_index=True, null=True)
+    delivery_date = models.DateTimeField('Дата доставки', blank=True, null=True, db_index=True)
 
     class Meta:
         verbose_name = 'Заказ'
