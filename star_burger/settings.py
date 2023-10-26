@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', default=123)
 DEBUG = env.bool('DEBUG', True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'rest_framework',
 ]
+
+YANDEX_KEY = env('YANDEX_KEY')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

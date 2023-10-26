@@ -1,7 +1,15 @@
+import re
+from operator import attrgetter, itemgetter
+
 from django.db import models
 from django.db.models import Prefetch, Count
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
+from geopy import distance
+from requests import HTTPError
+
+from foodcartapp.get_geo import fetch_coordinates
+from star_burger import settings
 
 
 class Restaurant(models.Model):
@@ -125,8 +133,39 @@ class RestaurantMenuItem(models.Model):
         return f"{self.restaurant.name} - {self.product.name}"
 
 
+def get_distance(apikey, place_from, place_to):
+    """
+    Возвращает расстояние между двумя точками в км
+    :param apikey: ключ для yandex api
+    :param place_from: начальная точка
+    :param place_to: конечная точка
+    :return: расстояние в км
+    """
+    try:
+        coords_from = fetch_coordinates(apikey, place_from)
+        coords_to = fetch_coordinates(apikey, place_to)
+        dist = distance.distance(coords_from, coords_to).km
+        return dist
+    except HTTPError as e:
+        return None
+
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def natural_keys(text):
+    """
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    """
+    return [atoi(c) for c in re.split(r'(\d+)', text)]
+
+
 class OrderQuerySet(models.QuerySet):
     def prefetch_items(self):
+        apikey = settings.YANDEX_KEY
         orders = Order.objects.exclude(status=Order.READY).order_by('-status').select_related(
             'restaurant').prefetch_related('items', 'items__product').annotate(product_count=Count('items__product'))
 
@@ -139,17 +178,20 @@ class OrderQuerySet(models.QuerySet):
                 order_products = order.items.all()
                 for restaurant in restaurants:
                     restaurants_possible = True
-                    for order_product in order_products:
-                        restaurants_for_product = menu_items.filter(product=order_product.product,
-                                                                    restaurant=restaurants[restaurant])
-                        if not restaurants_for_product:
-                            restaurants_possible = False
-                    if restaurants_possible:
-                        order_restaurants.append(restaurants[restaurant])
-
+                    div_distance = get_distance(apikey, order.address, restaurants[restaurant].address)
+                    order_restaurants.append({
+                        'restaurant': restaurants[restaurant],
+                        'distance': div_distance
+                    })
+                delivery_restaurants = []
                 if order_restaurants:
-                    order.restaurant_possible = order_restaurants
-        return orders
+                    for restaurant in order_restaurants:
+                        div_distance = restaurant['distance']
+                        restaurant["restaurant"].distance = div_distance
+                        delivery_restaurants.append(f'{restaurant["restaurant"].name}, {round(div_distance, 0)} км.')
+                delivery_restaurants.sort(key=natural_keys)
+                order.restaurant_possible = delivery_restaurants
+            return orders
 
 
 class Order(models.Model):
