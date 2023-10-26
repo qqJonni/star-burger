@@ -125,6 +125,8 @@ class RestaurantMenuItem(models.Model):
 
 
 class Order(models.Model):
+    CASH = 'Наличный'
+    CASHLESS = 'Безналичный'
     NEW = 'new'
     COOKING = 'cooking'
     DELIVERY = 'delivery'
@@ -135,7 +137,12 @@ class Order(models.Model):
         (DELIVERY, 'Доставка'),
         (READY, 'Доставлен'),
     ]
+    PAYMENT_METHOD = [
+        (CASH, 'Наличный'),
+        (CASHLESS, 'Безналичный')
+    ]
     status = models.CharField('Статус заказа', choices=ORDER_STATUS, default=NEW, max_length=20, db_index=True)
+    payment = models.CharField('Способ оплаты', choices=PAYMENT_METHOD, default=CASHLESS, max_length=20, db_index=True)
     firstname = models.CharField('Имя', max_length=50)
     lastname = models.CharField('Фамилия', max_length=50, db_index=True)
     phonenumber = PhoneNumberField(verbose_name='Телефон', db_index=True, region='RU')
