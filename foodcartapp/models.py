@@ -262,8 +262,7 @@ class Order(models.Model):
         return f'{self.firstname} {self.lastname} {self.phonenumber}'
 
     def get_total_coast(self):
-        if not self.totalprice:
-            return sum(item.get_cost() for item in self.items.all())
+        return sum(item.get_coast() for item in self.items.all())
 
     @staticmethod
     def prefetch_products():
@@ -271,7 +270,7 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, related_name='order_items', verbose_name='Заказы', on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, related_name='items', verbose_name='Заказы', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, related_name='order_products', verbose_name='Продукты', on_delete=models.CASCADE)
     quantity = models.IntegerField('Количество', validators=[MaxValueValidator(100), MinValueValidator(1)])
     price = models.DecimalField('Сумма', max_digits=10, decimal_places=2,
@@ -286,5 +285,4 @@ class OrderItem(models.Model):
         return f'{self.order.phonenumber} - {self.product.name}'
 
     def get_coast(self):
-        if not self.price:
-            return self.product.price * self.quantity
+        return self.product.price * self.quantity

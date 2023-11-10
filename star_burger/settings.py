@@ -42,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
     # 'star-burger.foodcartapp.custom_middleware.URLProtectionMiddleware'
 ]
 
@@ -118,12 +119,12 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-if DEBUG:
-    STATICFILES_DIRS = (
-        BASE_DIR / 'static',
-    )
-else:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# if DEBUG:
+#     STATICFILES_DIRS = (
+#         BASE_DIR / 'static',
+#     )
+# else:
+#     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 
 INTERNAL_IPS = [
@@ -135,3 +136,15 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "assets"),
     os.path.join(BASE_DIR, "bundles"),
 ]
+
+# Rollbar section
+ROLLBAR = {
+    'access_token': 'acbcbd4657a148c1b2228ae473730e25',
+    'environment': 'env' if DEBUG else 'env',
+    'branch': 'master',
+    'root': '/absolute/path/to/code/root',
+}
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler'
+}
