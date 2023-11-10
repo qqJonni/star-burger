@@ -62,6 +62,14 @@ SECRET_KEY=django-insecure-0if40nf4nf93n4
 ```sh
 YANDEX_KEY=...
 ```
+Определите переменную окружения `POST_SERVER_ITEM_ACCESS_TOKEN` в файле `.env`.
+Получить ключ по этой [ссылке](https://rollbar.com/).
+Ключ выглядит примерно так: `9499ed8424b662449a4b43dafc085be0`.
+Когда речь зайдёт о SDK, выбирайте Django и получите инструкции по интеграции. Там ключ.
+
+```sh
+POST_SERVER_ITEM_ACCESS_TOKEN=...
+```
 
 Создайте файл базы данных SQLite и отмигрируйте её следующей командой:
 

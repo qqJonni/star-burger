@@ -1,4 +1,5 @@
 import os
+import re
 
 import dj_database_url
 
@@ -32,6 +33,8 @@ INSTALLED_APPS = [
 ]
 
 YANDEX_KEY = env('YANDEX_KEY')
+
+POST_SERVER_ITEM_ACCESS_TOKEN = env('POST_SERVER_ITEM_ACCESS_TOKEN')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -139,10 +142,14 @@ STATICFILES_DIRS = [
 
 # Rollbar section
 ROLLBAR = {
-    'access_token': 'acbcbd4657a148c1b2228ae473730e25',
-    'environment': 'env' if DEBUG else 'env',
-    'branch': 'master',
-    'root': '/absolute/path/to/code/root',
+    'access_token': POST_SERVER_ITEM_ACCESS_TOKEN,
+    'environment': 'development' if DEBUG else 'production',
+    'code_version': '1.0',
+    'root': BASE_DIR,
+    'ignorable_404_urls': (
+        re.compile('/index\.php'),
+        re.compile('/foobar'),
+    ),
 }
 
 REST_FRAMEWORK = {
