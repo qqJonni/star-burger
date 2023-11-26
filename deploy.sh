@@ -17,7 +17,9 @@ deactivate
 sudo systemctl restart star-burger
 sudo systemctl reload nginx
 
+
 last_commit=$(git rev-parse HEAD);
+
 
 echo "Deploy completed successfully"
 echo "Last commit {$last_commit}"
