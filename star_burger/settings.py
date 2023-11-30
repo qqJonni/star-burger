@@ -18,8 +18,8 @@ DEBUG = env.bool('DEBUG', False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
 
-DB_USER = env('DB_USER', 'postgres')
-DB_PASSWORD = env('DB_PASSWORD', '1234')
+DB_USER = env('DB_USER')
+DB_PASSWORD = env('DB_PASSWORD')
 
 INSTALLED_APPS = [
     'foodcartapp.apps.FoodcartappConfig',
@@ -92,16 +92,8 @@ WSGI_APPLICATION = 'star_burger.wsgi.application'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'burger',
-        'USER': 'admin',
-        'PASSWORD': '1234',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+DB_URL = os.getenv('DB_URL')
+DATABASES = {'default': dj_database_url.config(default=DB_URL)}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -130,13 +122,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# if DEBUG:
-#     STATICFILES_DIRS = (
-#         BASE_DIR / 'static',
-#     )
-# else:
-#     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
 
 INTERNAL_IPS = [
     '127.0.0.1'
@@ -149,16 +134,19 @@ STATICFILES_DIRS = [
 ]
 
 # Rollbar section
-ROLLBAR = {
-    'access_token': POST_SERVER_ITEM_ACCESS_TOKEN,
-    'environment': 'development' if DEBUG else 'production',
-    'code_version': '1.0',
-    'root': BASE_DIR,
-    'ignorable_404_urls': (
-        re.compile('/index\.php'),
-        re.compile('/foobar'),
-    ),
-}
+ROLLBAR = {}
+
+if not DEBUG:
+    ROLLBAR = {
+        'access_token': POST_SERVER_ITEM_ACCESS_TOKEN,
+        'environment': 'development',
+        'code_version': '1.0',
+        'root': BASE_DIR,
+        'ignorable_404_urls': (
+            re.compile('/index\.php'),
+            re.compile('/foobar'),
+        ),
+    }
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler'
